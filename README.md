@@ -1,4 +1,4 @@
-**This README provides a clear step-by-step guide for anyone who wants to replicate your process. You can customize it further based on your specific needs.
+**This README provides a clear step-by-step guide for anyone who wants to replicate this process. You can customize it further based on your specific needs.
 **
 
 **# Ruby 2.6 Docker Image with Melange and apko**
