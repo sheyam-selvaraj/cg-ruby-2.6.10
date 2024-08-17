@@ -1,0 +1,113 @@
+package:
+  name: ruby-2.6
+  version: 2.6.10
+  epoch: 2
+  description: "the Ruby programming language"
+  copyright:
+    - license: Ruby
+    - license: BSD-2-Clause
+  dependencies:
+    provides:
+      - ruby=${{package.full-version}}
+
+environment:
+  contents:
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+      - https://packages.wolfi.dev/os
+    packages:
+      - build-base
+      - busybox
+      - bzip2-dev
+      - ca-certificates-bundle
+      - expat-dev
+      - gdbm-dev
+      - git
+      - libffi-dev
+      - linux-headers
+      - mpdecimal-dev
+      - ncurses-dev
+      - oniguruma-dev
+      - openssl
+      - readline-dev
+      - sqlite-dev
+      - xz-dev
+      - zlib-dev
+
+vars:
+  prefix: /usr
+
+pipeline:
+  - uses: fetch
+    with:
+      uri: https://cache.ruby-lang.org/pub/ruby/2.6/ruby-${{package.version}}.tar.gz
+      expected-sha256: 0dc609f263d49c4176d5725deefc337273676395985b5e017789373e8cadf16e
+
+  - name: Configure
+    runs: |
+      export RUBY_CONFIGURE_OPTS="--with-openssl-dir=/usr/bin/openssl"
+      ./configure \
+         --host=${{host.triplet.gnu}} \
+         --build=${{host.triplet.gnu}} \
+         --target=${{host.triplet.gnu}} \
+         --prefix=${{vars.prefix}} \
+         --enable-ipv6 \
+         --enable-loadable-sqlite-extensions \
+         --enable-optimizations \
+         --enable-shared \
+         --without-lto \
+         --with-computed-gotos \
+         --with-dbmliborder=gdbm:ndbm \
+         --with-system-expat \
+         --with-system-ffi \
+         --with-system-libmpdec \
+         --without-ensurepip
+
+  - uses: autoconf/make
+
+  - uses: autoconf/make-install
+
+  - uses: strip
+
+  - runs: |-
+      # Ignore the patch version of ruby since ruby will install under the
+      # version of the latest standard library. Should produce the string 2.6.*
+      RUBYWILD="$(echo ${{package.version}} | cut -d. -f-2).*"
+
+      RUBYDIR=${{targets.destdir}}${{vars.prefix}}/lib/ruby/$RUBYWILD
+      rm -rf ${RUBYDIR}/bundler
+      rm ${RUBYDIR}/bundler.rb
+
+      GEMDIR=${{targets.destdir}}${{vars.prefix}}/lib/ruby/gems/$RUBYWILD
+      rm -rf ${GEMDIR}/gems/bundler-*
+      rm ${GEMDIR}/specifications/default/bundler-*.gemspec
+
+      rm ${{targets.destdir}}/usr/bin/bundle \
+         ${{targets.destdir}}/usr/bin/bundler
+
+subpackages:
+  - name: "ruby-2.6-doc"
+    description: "ruby documentation"
+    pipeline:
+      - uses: split/manpages
+      - runs: |
+          mkdir -p "${{targets.subpkgdir}}"/usr/share
+          mv "${{targets.destdir}}"/usr/share/doc "${{targets.subpkgdir}}"/usr/share/
+          mv "${{targets.destdir}}"/usr/share/ri "${{targets.subpkgdir}}"/usr/share/
+
+  - name: "ruby-2.6-dev"
+    description: "ruby development headers"
+    pipeline:
+      - uses: split/dev
+
+test:
+  pipeline:
+    - runs: |
+        ruby --version
+
+        cat <<EOF >> /tmp/hello.rb
+        puts("Hello Wolfi!")
+        EOF
+
+        ruby /tmp/hello.rb
