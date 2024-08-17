@@ -3,7 +3,7 @@
 
 **# Ruby 2.6 Docker Image with Melange and apko**
 
-This repository contains steps to build a Docker image for Ruby 3.0 using Melange and apko, targeting the `amd64` architecture.
+This repository contains steps to build a Docker image for Ruby 2.6 using Melange and apko, targeting the `amd64` architecture.
 
 **## Prerequisites**
 
