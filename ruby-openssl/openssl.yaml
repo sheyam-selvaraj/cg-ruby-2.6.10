@@ -1,0 +1,57 @@
+package:
+  name: openssl
+  version: 1.0.2u
+  epoch: 0
+  description: "OpenSSL: Toolkit for Secure Sockets Layer (SSL) and Transport Layer Security (TLS)"
+  copyright:
+  - license: OpenSSL
+
+environment:
+  contents:
+    keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    repositories:
+    - https://packages.wolfi.dev/os
+    packages:
+    - build-base
+    - ca-certificates-bundle
+    - perl
+    - busybox
+    - wget
+    - linux-headers
+    - gcc
+    - make
+    - cmake
+
+pipeline:
+- name: Fetch OpenSSL source
+  pipeline:
+  - uses: fetch
+    with:
+      uri: https://www.openssl.org/source/openssl-1.0.2u.tar.gz
+      expected-sha256: ecd0c6ffb493dd06707d38b14bb4d8c2288bb7033735606569d8f90f89669d16
+
+- name: Configure and build
+  runs: |
+    ./config \
+    shared \
+    no-asm \
+    no-zlib \
+    no-ssl2 \
+    no-ssl3 \
+    no-rc5 \
+    no-ec2m \
+    no-sm2 \
+    no-sm4 \
+    -Wa,--noexecstack \
+    -fPIC -Wa,--noexecstack
+
+    make -j$(nproc)
+    sed -i 's/install: all install_docs install_sw/install: install_sw/' Makefile
+    make
+    make install_sw
+    find / -name "libcrypto.so.1.0.0" 2>/dev/null
+    find / -name "ssl" 2>/dev/null
+    cp -r /usr/local/ssl/* ${{targets.destdir}}
+    export PATH="/usr/openssl/bin:$PATH"
+
